@@ -1,44 +1,91 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Image } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ImageBackground, Image } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import axios from 'axios';
 import { TextInputMask } from 'react-native-masked-text';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import styles from './styles';
 
-const CadastroScreen = () => {
-  const [dadosCadastro, setDadosCadastro] = useState({
-    nomeCompleto: '',
-    dataNascimento: '',
+const RegistrationScreen = () => {
+  const [registrationData, setRegistrationData] = useState({
+    name: '',
+    dateOfBirth: '',
     email: '',
-    senha: '',
-    confirmarSenha: '',
-    cnpj: '',
+    password: '',
+    confirmPassword: '',
+    document: '',
   });
 
-  const handleChange = (field, value) => {
-    setDadosCadastro({
-      ...dadosCadastro,
-      [field]: value,
+  const [errorMessages, setErrorMessages] = useState({
+    name: '',
+    dateOfBirth: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    document: '',
+  });
+
+  const validateFields = () => {
+    let isValid = true;
+    const errors = {};
+
+    // Validar campos obrigatórios
+    Object.entries(registrationData).forEach(([key, value]) => {
+      if (value.trim() === '') {
+        isValid = false;
+        errors[key] = 'Campo obrigatório';
+      }
     });
+
+    setErrorMessages(errors);
+    return isValid;
   };
 
-  const handleCadastrar = async () => {
-    try {
-      // Fazendo a requisição POST para cadastrar o usuário
-      const response = await axios.post('http://192.168.0.10:8080/auth/registre', {
-        nomeCompleto: dadosCadastro.nomeCompleto,
-        dataNascimento: dadosCadastro.dataNascimento,
-        email: dadosCadastro.email,
-        senha: dadosCadastro.senha,
-        confirmarSenha: dadosCadastro.confirmarSenha,
-        cnpj: dadosCadastro.cnpj,
-      });
+  const validatePassword = () => {
+    const errors = { ...errorMessages };
+  
+    // Validar senhas iguais
+    if (registrationData.password !== registrationData.confirmPassword) {
+      errors.password = 'As senhas não coincidem';
+      errors.confirmPassword = 'As senhas não coincidem';
+    } else {
+      errors.password = '';
+      errors.confirmPassword = '';
+    }
+  
+    setErrorMessages(errors);
+  
+    // Retornar true se não houver mensagens de erro nas senhas
+    return !errors.password && !errors.confirmPassword;
+  };
 
-      console.log('Usuário cadastrado com sucesso:', response.data);
-    } catch (error) {
-      // Lógica de erro - aqui você pode exibir uma mensagem de erro para o usuário
-      console.error('Erro ao cadastrar o usuário:', error);
+  const [showConfirmationMessage, setShowConfirmationMessage] = useState(false);
+
+  const handleCadastrar = async () => {
+    const fieldsValid = validateFields();
+    const passwordsValid = validatePassword();
+
+    if (fieldsValid && passwordsValid) {
+      try {
+
+        const day = registrationData.dateOfBirth.split('T')[0];
+        const mounth = registrationData.dateOfBirth.split('T')[1]
+        const year = registrationData.dateOfBirth.split('T')[2]
+        const formattedDateOfBirth = year-mounth-day;
+   
+        const response = await axios.post('http://192.168.0.10:8080/auth/register', {
+          name: registrationData.name,
+          dateOfBirth: formattedDateOfBirth,
+          email: registrationData.email,
+          password: registrationData.password,
+          confirmPassword: registrationData.confirmPassword,
+          document: registrationData.document,
+        });
+
+        console.log('Usuário cadastrado com sucesso, favor confirmar cadastro no e-mail');
+      } catch (error) {
+        console.error('Erro ao cadastrar o usuário:', error);
+      }
     }
   };
 
@@ -52,55 +99,74 @@ const CadastroScreen = () => {
         <StatusBar style="auto" />
         <Image source={require('../../../images/logo.png')} style={styles.logo} />
         <View style={styles.formContainer}>
+          {showConfirmationMessage && (
+            <Text style={styles.confirmationMessage}>
+              Para finalizar, é necessário confirmar o e-mail enviado para {registrationData.email}.
+            </Text>
+          )}
+        </View>
+        <View style={styles.formContainer}>
           <Text style={styles.title}>Cadastro</Text>
           <TextInput
             placeholder="Nome Completo"
-            value={dadosCadastro.nomeCompleto}
-            onChangeText={(text) => handleChange('nomeCompleto', text)}
+            value={registrationData.name}
+            onChangeText={(text) => setRegistrationData({ ...registrationData, name: text })}
             style={styles.input}
             placeholderTextColor="#333"
           />
+          <Text style={styles.errorText}>{errorMessages.name}</Text>
+
           <TextInputMask
             type={'datetime'}
             options={{
               format: 'DD/MM/YYYY',
             }}
             placeholder="Data de Nascimento"
-            value={dadosCadastro.dataNascimento}
-            onChangeText={(text) => handleChange('dataNascimento', text)}
+            value={registrationData.dateOfBirth}
+            onChangeText={(text) => setRegistrationData({ ...registrationData, dateOfBirth: text })}
             style={styles.input}
             placeholderTextColor="#333"
           />
+          <Text style={styles.errorText}>{errorMessages.dateOfBirth}</Text>
+
           <TextInput
             placeholder="Email"
-            value={dadosCadastro.email}
-            onChangeText={(text) => handleChange('email', text)}
+            value={registrationData.email}
+            onChangeText={(text) => setRegistrationData({ ...registrationData, email: text })}
             style={styles.input}
             placeholderTextColor="#333"
           />
+          <Text style={styles.errorText}>{errorMessages.email}</Text>
+
           <TextInput
             placeholder="Senha"
-            value={dadosCadastro.senha}
-            onChangeText={(text) => handleChange('senha', text)}
+            value={registrationData.password}
+            onChangeText={(text) => setRegistrationData({ ...registrationData, password: text })}
             secureTextEntry
             style={styles.input}
             placeholderTextColor="#333"
           />
+          <Text style={styles.errorText}>{errorMessages.password}</Text>
+
           <TextInput
             placeholder="Confirmar Senha"
-            value={dadosCadastro.confirmarSenha}
-            onChangeText={(text) => handleChange('confirmarSenha', text)}
+            value={registrationData.confirmPassword}
+            onChangeText={(text) => setRegistrationData({ ...registrationData, confirmPassword: text })}
             secureTextEntry
             style={styles.input}
             placeholderTextColor="#333"
           />
+          <Text style={styles.errorText}>{errorMessages.confirmPassword}</Text>
+
           <TextInput
-            placeholder="CNPJ"
-            value={dadosCadastro.cnpj}
-            onChangeText={(text) => handleChange('cnpj', text)}
+            placeholder="Documento"
+            value={registrationData.document}
+            onChangeText={(text) => setRegistrationData({ ...registrationData, document: text })}
             style={styles.input}
             placeholderTextColor="#333"
           />
+          <Text style={styles.errorText}>{errorMessages.document}</Text>
+
           <TouchableOpacity style={styles.button} onPress={handleCadastrar}>
             <Text style={styles.buttonText}>Cadastrar</Text>
           </TouchableOpacity>
@@ -110,4 +176,4 @@ const CadastroScreen = () => {
   );
 };
 
-export default CadastroScreen;
+export default RegistrationScreen;
