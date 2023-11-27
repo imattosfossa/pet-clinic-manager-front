@@ -68,11 +68,10 @@ const RegistrationScreen = () => {
     if (fieldsValid && passwordsValid) {
       try {
 
-        const day = registrationData.dateOfBirth.split('T')[0];
-        const mounth = registrationData.dateOfBirth.split('T')[1]
-        const year = registrationData.dateOfBirth.split('T')[2]
-        const formattedDateOfBirth = year-mounth-day;
-   
+        const day = registrationData.dateOfBirth.split('/')[0];
+        const mounth = registrationData.dateOfBirth.split('/')[1]
+        const year = registrationData.dateOfBirth.split('/')[2]
+        const formattedDateOfBirth = year + "-" + mounth + "-" + day;
         const response = await axios.post('http://192.168.0.10:8080/auth/register', {
           name: registrationData.name,
           dateOfBirth: formattedDateOfBirth,
